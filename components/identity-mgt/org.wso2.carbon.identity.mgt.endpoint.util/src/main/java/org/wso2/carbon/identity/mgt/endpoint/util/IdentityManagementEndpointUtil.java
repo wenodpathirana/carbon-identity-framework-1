@@ -54,8 +54,6 @@ import org.wso2.securevault.SecretResolver;
 import org.wso2.securevault.SecretResolverFactory;
 import org.wso2.securevault.commons.MiscellaneousUtil;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -63,6 +61,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -73,6 +74,7 @@ import java.util.ResourceBundle;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -175,7 +177,7 @@ public class IdentityManagementEndpointUtil {
      * Returns the My Account access url for the specific tenant.
      *
      * @param userPortalUrl configured user portal url
-     * @param tenantDomain tenant domain of the user
+     * @param tenantDomain  tenant domain of the user
      * @return configured url or the default url if configured url is empty
      */
     public static final String getUserPortalUrl(String userPortalUrl, String tenantDomain) {
@@ -207,9 +209,9 @@ public class IdentityManagementEndpointUtil {
     /**
      * Replace the ${UserTenantHint} placeholder in the url with the tenant domain.
      *
-     * @param url           Url with the placeholder.
-     * @param tenantDomain  Tenant Domain.
-     * @return              Processed url.
+     * @param url          Url with the placeholder.
+     * @param tenantDomain Tenant Domain.
+     * @return Processed url.
      */
     public static String replaceUserTenantHintPlaceholder(String url, String tenantDomain) {
 
@@ -548,8 +550,7 @@ public class IdentityManagementEndpointUtil {
      * @param callbackUrl Callback url from the request.
      * @return Encoded callback url.
      * @throws URISyntaxException URI Syntax Exception.
-     * @deprecated
-     * This method is no longer acceptable to encode query params of the call back url. Because this method
+     * @deprecated This method is no longer acceptable to encode query params of the call back url. Because this method
      * doesn't support URLs with spaces.
      * Use the {@link #encodeURL(String)} method instead.
      */
@@ -568,8 +569,9 @@ public class IdentityManagementEndpointUtil {
 
         if (MapUtils.isNotEmpty(encodedQueryMap)) {
             encodedCallbackUrl.append("?");
-            encodedCallbackUrl.append(encodedQueryMap.keySet().stream().map(key -> key + PADDING_CHAR + encodedQueryMap.get(key))
-                    .collect(Collectors.joining(SPLITTING_CHAR)));
+            encodedCallbackUrl.append(
+                    encodedQueryMap.keySet().stream().map(key -> key + PADDING_CHAR + encodedQueryMap.get(key))
+                            .collect(Collectors.joining(SPLITTING_CHAR)));
         }
 
         return encodedCallbackUrl.toString();
@@ -623,16 +625,17 @@ public class IdentityManagementEndpointUtil {
 
     /**
      * Method to replace the last occurrence of the provided string in the base string.
-     *
+     * <p>
      * issue: https://services.mnm.local:9443/services => https://am/identity/concent-mgt/v1.mnm.local:9443/services/
      * Fix: https://services.mnm.local:9443/services => https://services.mnm.local:9443/am/identity/concent-mgt/v1/
      *
-     * @param base The base string
-     * @param toReplace The string which needs to be find and replaced
+     * @param base        The base string
+     * @param toReplace   The string which needs to be find and replaced
      * @param replaceWith The replacement string.
      * @return String with the replaced value.
-     * */
+     */
     private static String replaceLastOccurrence(String base, String toReplace, String replaceWith) {
+
         int lastIndex = base.lastIndexOf(toReplace);
 
         if (lastIndex == -1) {
@@ -645,11 +648,13 @@ public class IdentityManagementEndpointUtil {
     }
 
     public static void addErrorInformation(HttpServletRequest request, Exception e) {
+
         Error error = buildError(e);
         addErrorInformation(request, error);
     }
 
     public static void addErrorInformation(HttpServletRequest request, Error errorD) {
+
         request.setAttribute("error", true);
         if (errorD != null) {
             request.setAttribute("errorMsg", errorD.getDescription());
@@ -714,13 +719,9 @@ public class IdentityManagementEndpointUtil {
     private static void loadCredentials() throws IOException {
 
         Properties properties = new Properties();
-        File currentDirectory =
-                new File(new File(IdentityManagementEndpointConstants.RELATIVE_PATH_START_CHAR).getAbsolutePath());
-        String configFilePath = currentDirectory.getCanonicalPath() + File.separator +
-                IdentityManagementEndpointConstants.SERVICE_CONFIG_RELATIVE_PATH;
-        File configFile = new File(configFilePath);
+        Path configFile = Paths.get(IdentityManagementEndpointConstants.SERVICE_CONFIG_RELATIVE_PATH).toAbsolutePath();
 
-        try (InputStream inputStream = configFile.exists() ? new FileInputStream(configFile) :
+        try (InputStream inputStream = Files.exists(configFile) ? Files.newInputStream(configFile) :
                 IdentityManagementServiceUtil.class.getClassLoader().getResourceAsStream
                         (IdentityManagementEndpointConstants.SERVICE_CONFIG_FILE_NAME)) {
             properties.load(inputStream);
@@ -864,8 +865,8 @@ public class IdentityManagementEndpointUtil {
     /**
      * Get a query parameter value from a URL.
      *
-     * @param url               URL.
-     * @param queryParameter    Required query parameter name.
+     * @param url            URL.
+     * @param queryParameter Required query parameter name.
      * @return Query parameter value.
      * @throws URISyntaxException If url is not in valid syntax.
      */
@@ -884,16 +885,16 @@ public class IdentityManagementEndpointUtil {
     /**
      * Stores a cookie to the response.
      *
-     * @param req         Incoming HttpServletRequest.
-     * @param resp        Outgoing HttpServletResponse.
-     * @param cookieName  Name of the cookie to be stored.
-     * @param value       Value of the cookie.
-     * @param age         Max age of the cookie.
-     * @param sameSite    SameSite attribute value for the cookie.
-     * @param domain      Domain of the cookie.
+     * @param req        Incoming HttpServletRequest.
+     * @param resp       Outgoing HttpServletResponse.
+     * @param cookieName Name of the cookie to be stored.
+     * @param value      Value of the cookie.
+     * @param age        Max age of the cookie.
+     * @param sameSite   SameSite attribute value for the cookie.
+     * @param domain     Domain of the cookie.
      */
     public static void setCookie(HttpServletRequest req, HttpServletResponse resp, String cookieName, String value,
-                          Integer age, SameSiteCookie sameSite, String path, String domain) {
+                                 Integer age, SameSiteCookie sameSite, String path, String domain) {
 
         CookieBuilder cookieBuilder = new CookieBuilder(cookieName, value);
         IdentityCookieConfig cookieConfig = IdentityUtil.getIdentityCookieConfig(cookieName);
